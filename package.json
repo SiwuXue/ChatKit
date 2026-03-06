@@ -19,6 +19,9 @@
     "typescript": "5.1.6"
   },
   "manifest": {
+    "permissions": [
+      "storage"
+    ],
     "host_permissions": [
       "https://*/*"
     ]

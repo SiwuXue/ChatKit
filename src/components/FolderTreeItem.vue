@@ -18,6 +18,8 @@ const props = defineProps<{
   createChildOfId: string | null
   childName: string
   colorOptions: string[]
+  dragOverFolderId: string | null
+  draggingFolderId: string | null
 }>()
 
 const emit = defineEmits<{
@@ -36,13 +38,23 @@ const emit = defineEmits<{
   (e: "update:childName", value: string): void
   (e: "confirm-create-child", parentId: string): void
   (e: "cancel-create-child"): void
+  (e: "folder-drag-over", payload: { id: string; event: DragEvent }): void
+  (e: "folder-drag-leave", id: string): void
+  (e: "folder-drop", payload: { id: string; event: DragEvent }): void
+  (e: "folder-drag-start", id: string): void
+  (e: "folder-drag-end"): void
+  (e: "toggle-conversation-star", payload: { folderId: string; conversationId: string }): void
+  (e: "remove-conversation", payload: { folderId: string; conversationId: string }): void
 }>()
 
 const rowPadding = computed(() => `${props.depth * 16 + 10}px`)
 const editorPadding = computed(() => `${props.depth * 16 + 42}px`)
 const hasChildren = computed(() => props.folder.children.length > 0)
+const hasConversations = computed(() => props.folder.conversations.length > 0)
 const isRenaming = computed(() => props.renameFolderId === props.folder.id)
 const isCreatingChild = computed(() => props.createChildOfId === props.folder.id)
+const isDropTarget = computed(() => props.dragOverFolderId === props.folder.id)
+const isDraggingSource = computed(() => props.draggingFolderId === props.folder.id)
 const showActions = computed(
   () => props.hoveredFolderId === props.folder.id || props.activeMoreMenuId === props.folder.id
 )
@@ -54,18 +66,66 @@ const onRenameInput = (event: Event) => {
 const onChildInput = (event: Event) => {
   emit("update:childName", (event.target as HTMLInputElement).value)
 }
+
+const onDragOver = (event: DragEvent) => {
+  emit("folder-drag-over", { id: props.folder.id, event })
+}
+
+const onDragLeave = (event: DragEvent) => {
+  const current = event.currentTarget as HTMLElement | null
+  const related = event.relatedTarget as Node | null
+  if (current && related && current.contains(related)) {
+    return
+  }
+
+  emit("folder-drag-leave", props.folder.id)
+}
+
+const onDrop = (event: DragEvent) => {
+  emit("folder-drop", { id: props.folder.id, event })
+}
+
+const onFolderDragStart = (event: DragEvent) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest("button,input,a")) {
+    event.preventDefault()
+    return
+  }
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData(
+      "application/x-folder-node",
+      JSON.stringify({ id: props.folder.id })
+    )
+    event.dataTransfer.setData("text/plain", props.folder.name)
+  }
+
+  emit("folder-drag-start", props.folder.id)
+}
+
+const onFolderDragEnd = () => {
+  emit("folder-drag-end")
+}
 </script>
 
 <template>
   <li class="folder-item">
     <div
       class="folder-row"
+      :class="{ 'drop-target': isDropTarget, 'drag-source': isDraggingSource }"
       :style="{ paddingLeft: rowPadding }"
+      draggable="true"
       @mouseenter="emit('set-hover', folder.id)"
-      @mouseleave="emit('set-hover', null)">
+      @mouseleave="emit('set-hover', null)"
+      @dragover="onDragOver"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
+      @dragstart="onFolderDragStart"
+      @dragend="onFolderDragEnd">
       <button
         class="arrow-btn"
-        :class="{ collapsed: !folder.expanded, empty: !hasChildren }"
+        :class="{ collapsed: !folder.expanded, empty: !hasChildren && !hasConversations }"
         type="button"
         @click.stop="emit('toggle-expand', folder.id)">
         <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -105,7 +165,12 @@ const onChildInput = (event: Event) => {
           </button>
           <button class="editor-btn cancel" type="button" @click.stop="emit('cancel-rename')">✗</button>
         </div>
-        <span v-else class="folder-name" :title="folder.name">{{ folder.name }}</span>
+        <div v-else class="folder-name-line">
+          <span class="folder-name" :title="folder.name">{{ folder.name }}</span>
+          <span v-if="folder.conversations.length > 0" class="folder-count">
+            {{ folder.conversations.length }}
+          </span>
+        </div>
       </div>
 
       <div class="row-actions" :class="{ visible: showActions }">
@@ -161,6 +226,54 @@ const onChildInput = (event: Event) => {
       </div>
     </div>
 
+    <ul v-if="folder.expanded && hasConversations" class="conversation-list" :style="{ paddingLeft: editorPadding }">
+      <li
+        v-for="conversation in folder.conversations"
+        :key="conversation.id"
+        class="conversation-item"
+        :class="{ starred: conversation.starred }">
+        <a class="conversation-link" :href="conversation.href" :title="conversation.title">
+          {{ conversation.title }}
+        </a>
+        <div class="conversation-actions">
+          <button
+            class="conversation-icon-btn"
+            type="button"
+            :title="conversation.starred ? '取消标星' : '标星'"
+            @click.stop="
+              emit('toggle-conversation-star', {
+                folderId: folder.id,
+                conversationId: conversation.id
+              })
+            ">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M8 2.1l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L2.2 6.3l4-.6z"
+                fill="none"
+                :stroke="conversation.starred ? '#d97706' : 'currentColor'"
+                stroke-linejoin="round"
+                stroke-width="1.2" />
+            </svg>
+          </button>
+          <button
+            class="conversation-icon-btn"
+            type="button"
+            title="移除归档"
+            @click.stop="emit('remove-conversation', { folderId: folder.id, conversationId: conversation.id })">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M4 4l8 8M12 4l-8 8"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-width="1.6" />
+            </svg>
+          </button>
+        </div>
+        <div class="conversation-tooltip">{{ conversation.title }}</div>
+      </li>
+    </ul>
+
     <div v-if="isCreatingChild" class="inline-editor child-editor" :style="{ paddingLeft: editorPadding }" @click.stop>
       <span class="editor-label">输入文件夹名称:</span>
       <input
@@ -190,6 +303,8 @@ const onChildInput = (event: Event) => {
         :create-child-of-id="createChildOfId"
         :child-name="childName"
         :color-options="colorOptions"
+        :drag-over-folder-id="dragOverFolderId"
+        :dragging-folder-id="draggingFolderId"
         @toggle-expand="emit('toggle-expand', $event)"
         @set-hover="emit('set-hover', $event)"
         @toggle-menu="emit('toggle-menu', $event)"
@@ -204,247 +319,14 @@ const onChildInput = (event: Event) => {
         @cancel-rename="emit('cancel-rename')"
         @update:childName="emit('update:childName', $event)"
         @confirm-create-child="emit('confirm-create-child', $event)"
-        @cancel-create-child="emit('cancel-create-child')" />
+        @cancel-create-child="emit('cancel-create-child')"
+        @folder-drag-over="emit('folder-drag-over', $event)"
+        @folder-drag-leave="emit('folder-drag-leave', $event)"
+        @folder-drop="emit('folder-drop', $event)"
+        @folder-drag-start="emit('folder-drag-start', $event)"
+        @folder-drag-end="emit('folder-drag-end')"
+        @toggle-conversation-star="emit('toggle-conversation-star', $event)"
+        @remove-conversation="emit('remove-conversation', $event)" />
     </ul>
   </li>
 </template>
-
-<style scoped>
-.folder-item {
-  list-style: none;
-}
-
-.folder-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  border-radius: 10px;
-  transition: background-color 0.2s ease;
-}
-
-.folder-row:hover {
-  background: rgba(92, 101, 118, 0.12);
-}
-
-.arrow-btn {
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: #636d80;
-  cursor: pointer;
-  padding: 0;
-  transition: transform 0.2s ease;
-}
-
-.arrow-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.arrow-btn.collapsed {
-  transform: rotate(0deg);
-}
-
-.arrow-btn:not(.collapsed) {
-  transform: rotate(90deg);
-}
-
-.arrow-btn.empty {
-  opacity: 0.45;
-}
-
-.folder-icon {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.folder-icon svg {
-  width: 20px;
-  height: 16px;
-}
-
-.folder-name-wrap {
-  min-width: 0;
-  flex: 1;
-}
-
-.folder-name {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.row-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-  padding-right: 8px;
-}
-
-.row-actions.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.icon-btn {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #6a7386;
-  cursor: pointer;
-}
-
-.icon-btn:hover {
-  color: #2b3342;
-  background: rgba(88, 98, 118, 0.14);
-}
-
-.icon-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.menu-wrap {
-  position: relative;
-}
-
-.dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  width: 168px;
-  border-radius: 12px;
-  border: 1px solid #d2d7e0;
-  background: #fff;
-  box-shadow: 0 16px 30px rgba(25, 38, 58, 0.16);
-  padding: 6px;
-  z-index: 20;
-}
-
-.menu-item {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: #1f2937;
-  text-align: left;
-  font-size: 13px;
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-}
-
-.menu-item:hover {
-  background: #f0f3f8;
-}
-
-.menu-item.danger {
-  color: #c12a2a;
-}
-
-.color-picker {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  padding: 8px;
-}
-
-.color-chip {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  border: 1px solid rgba(15, 23, 42, 0.18);
-  cursor: pointer;
-}
-
-.color-chip.active {
-  outline: 2px solid #111827;
-  outline-offset: 1px;
-}
-
-.inline-editor {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.inline-editor.compact {
-  width: 100%;
-}
-
-.child-editor {
-  margin: 4px 0 6px;
-  padding-right: 8px;
-}
-
-.editor-label {
-  color: #667085;
-  font-size: 12px;
-  flex: 0 0 auto;
-}
-
-.editor-input {
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  border: 1px solid #cdd4e0;
-  border-radius: 8px;
-  padding: 0 8px;
-  font-size: 13px;
-  color: #1f2937;
-  background: #fff;
-}
-
-.editor-input:focus {
-  outline: none;
-  border-color: #6b82ff;
-  box-shadow: 0 0 0 3px rgba(86, 117, 255, 0.15);
-}
-
-.editor-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 0;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-}
-
-.editor-btn.ok {
-  color: #175e3b;
-  background: #ddf3e4;
-}
-
-.editor-btn.cancel {
-  color: #8a2f2f;
-  background: #f8dfdf;
-}
-
-.children-list {
-  margin: 0;
-  padding: 0;
-}
-</style>

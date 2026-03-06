@@ -10,7 +10,7 @@ import cssText from "data-text:./doubao-ui.css"
 import FolderManager from "../components/FolderManager.vue"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://www.doubao.com/*"]
+  matches: ["https://www.kimi.com/*"]
 }
 
 export const getStyle: PlasmoGetStyle = () => {
@@ -20,10 +20,10 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 const getInlineAnchor: PlasmoGetInlineAnchor = () =>
-  document.querySelector(".flex-nowrap")
+  document.querySelector(".kimi-plus-part")
 
 const mountShadowHost: PlasmoMountShadowHost = ({ anchor, shadowHost }) => {
-  anchor?.element?.insertBefore(shadowHost!, anchor.element.firstChild)
+  anchor?.element?.insertAdjacentElement("afterend", shadowHost!)
 }
 
 export default {

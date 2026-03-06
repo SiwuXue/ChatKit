@@ -16,7 +16,8 @@
       ]
     },
     "types": [
-      "vue"
+      "vue",
+      "chrome"
     ],
     "baseUrl": "."
   }

@@ -1,7 +1,14 @@
-﻿export type SiteSettings = {
+export type SiteSettings = {
   enabled: boolean
   hideArchivedConversations: boolean
   folderSpacing: number
+  timelineScrollMode: "flow" | "jump"
+  timelineHideOutsideContainer: boolean
+  timelineDraggable: boolean
+  timelinePreventAutoJump: boolean
+  timelineEnableNodeHierarchy: boolean
+  timelineTop: number
+  timelineRight: number
 }
 
 export type SupportedSite = {
@@ -13,7 +20,14 @@ export type SupportedSite = {
 const defaultSettings: SiteSettings = {
   enabled: true,
   hideArchivedConversations: false,
-  folderSpacing: 0
+  folderSpacing: 0,
+  timelineScrollMode: "flow",
+  timelineHideOutsideContainer: false,
+  timelineDraggable: false,
+  timelinePreventAutoJump: false,
+  timelineEnableNodeHierarchy: false,
+  timelineTop: 110,
+  timelineRight: 10
 }
 
 export const supportedSites: SupportedSite[] = [
@@ -66,9 +80,7 @@ export const storageSyncSet = (payload: Record<string, unknown>): Promise<void> 
     })
   })
 
-export const detectSupportedSite = (
-  hostname: string
-): SupportedSite | null => {
+export const detectSupportedSite = (hostname: string): SupportedSite | null => {
   const normalizedHost = hostname.trim().toLowerCase()
   if (!normalizedHost) {
     return null
@@ -105,6 +117,29 @@ const normalizeFolderSpacing = (value: unknown) => {
   return Math.max(0, Math.min(16, Math.round(value)))
 }
 
+const normalizeBoolean = (value: unknown, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback
+
+const normalizeTimelineScrollMode = (
+  value: unknown
+): SiteSettings["timelineScrollMode"] => (value === "jump" ? "jump" : "flow")
+
+const normalizeTimelineTop = (value: unknown) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return defaultSettings.timelineTop
+  }
+
+  return Math.max(0, Math.min(1000, Math.round(value)))
+}
+
+const normalizeTimelineRight = (value: unknown) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return defaultSettings.timelineRight
+  }
+
+  return Math.max(0, Math.min(500, Math.round(value)))
+}
+
 export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
   if (!raw || typeof raw !== "object") {
     return getDefaultSiteSettings()
@@ -112,21 +147,35 @@ export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
 
   const candidate = raw as Partial<SiteSettings>
   return {
-    enabled:
-      typeof candidate.enabled === "boolean"
-        ? candidate.enabled
-        : defaultSettings.enabled,
-    hideArchivedConversations:
-      typeof candidate.hideArchivedConversations === "boolean"
-        ? candidate.hideArchivedConversations
-        : defaultSettings.hideArchivedConversations,
-    folderSpacing: normalizeFolderSpacing(candidate.folderSpacing)
+    enabled: normalizeBoolean(candidate.enabled, defaultSettings.enabled),
+    hideArchivedConversations: normalizeBoolean(
+      candidate.hideArchivedConversations,
+      defaultSettings.hideArchivedConversations
+    ),
+    folderSpacing: normalizeFolderSpacing(candidate.folderSpacing),
+    timelineScrollMode: normalizeTimelineScrollMode(candidate.timelineScrollMode),
+    timelineHideOutsideContainer: normalizeBoolean(
+      candidate.timelineHideOutsideContainer,
+      defaultSettings.timelineHideOutsideContainer
+    ),
+    timelineDraggable: normalizeBoolean(
+      candidate.timelineDraggable,
+      defaultSettings.timelineDraggable
+    ),
+    timelinePreventAutoJump: normalizeBoolean(
+      candidate.timelinePreventAutoJump,
+      defaultSettings.timelinePreventAutoJump
+    ),
+    timelineEnableNodeHierarchy: normalizeBoolean(
+      candidate.timelineEnableNodeHierarchy,
+      defaultSettings.timelineEnableNodeHierarchy
+    ),
+    timelineTop: normalizeTimelineTop(candidate.timelineTop),
+    timelineRight: normalizeTimelineRight(candidate.timelineRight)
   }
 }
 
-export const getSiteSettings = async (
-  hostname: string
-): Promise<SiteSettings> => {
+export const getSiteSettings = async (hostname: string): Promise<SiteSettings> => {
   const key = getSiteSettingsStorageKey(hostname)
   const raw = await storageSyncGet(key)
   return normalizeSiteSettings(raw)

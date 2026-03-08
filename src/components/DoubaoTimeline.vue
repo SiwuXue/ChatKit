@@ -8,17 +8,20 @@ type CollectedNode = {
   element: HTMLElement
 }
 
-const messageSelector = '[data-testid="message_content"][data-message-id]'
+const messageSelector = '[data-testid="receive_message"], [data-testid="send_message"], [data-testid="message_content"]'
 const messageSelectorCandidates = [
-  '[data-testid="message_content"][data-message-id]',
+  '[data-testid="receive_message"]',
+  '[data-testid="send_message"]',
   '[data-testid="message_content"]',
-  '[data-message-id]'
+  '[data-testid="message_text_content"]',
+  '.message-content',
+  '.chat-message-item'
 ]
 const messageTextSelectorCandidates = [
   '[data-testid="message_text_content"]',
-  '[data-testid*="message_text"]',
-  ".markdown-body",
-  ".markdown"
+  '.markdown-body',
+  '.markdown',
+  'p'
 ]
 
 const normalizeText = (raw: string) => raw.replace(/\s+/g, " ").trim()
@@ -32,59 +35,67 @@ const safeCssEscape = (value: string) => {
   return value.replace(/["\\]/g, "\\$&")
 }
 
-const collectCandidateElements = () => {
-  const seen = new Set<HTMLElement>()
-  const result: HTMLElement[] = []
-
-  for (const selector of messageSelectorCandidates) {
-    const elements = document.querySelectorAll<HTMLElement>(selector)
-    for (const element of elements) {
-      if (seen.has(element)) {
-        continue
-      }
-      seen.add(element)
-      result.push(element)
-    }
-  }
-
-  return result
-}
-
 const collectNodes = (): CollectedNode[] => {
-  const messageElements = collectCandidateElements()
   const nextNodes: CollectedNode[] = []
   const seen = new Set<string>()
+  const seenElements = new Set<HTMLElement>()
 
-  for (let index = 0; index < messageElements.length; index += 1) {
-    const sourceElement = messageElements[index]
-    const element =
-      sourceElement.closest<HTMLElement>('[data-testid="message_content"]') ?? sourceElement
+  const candidateElements: HTMLElement[] = []
+  for (const selector of messageSelectorCandidates) {
+    const found = document.querySelectorAll<HTMLElement>(selector)
+    found.forEach(el => {
+      if (!seenElements.has(el)) {
+        candidateElements.push(el)
+        seenElements.add(el)
+      }
+    })
+  }
+
+  // Clear seenElements to reuse for content grouping
+  seenElements.clear()
+
+  for (let index = 0; index < candidateElements.length; index += 1) {
+    let element = candidateElements[index]
+    
+    // Group by content container if possible
+    const contentWrapper = element.closest<HTMLElement>('[data-testid="receive_message"], [data-testid="send_message"]')
+    if (contentWrapper) {
+      element = contentWrapper
+    }
+
+    if (seenElements.has(element)) continue
+    seenElements.add(element)
 
     const fallbackId = `msg-${index + 1}`
-    let id = element.dataset.messageId?.trim() ?? fallbackId
+    let id = element.dataset.messageId?.trim() || 
+             (element.querySelector('[data-message-id]') as HTMLElement)?.dataset?.messageId?.trim() || 
+             (element.closest('[data-message-id]') as HTMLElement)?.dataset?.messageId?.trim() || 
+             fallbackId
+    
     if (seen.has(id)) {
-      id = `${id}-${index + 1}`
+      id = `${id}-${index}`
     }
-    if (seen.has(id)) {
-      continue
-    }
+    seen.add(id)
 
     const textElement = messageTextSelectorCandidates.reduce<HTMLElement | null>(
-      (acc, selector) => acc ?? element.querySelector<HTMLElement>(selector),
+      (acc, selector) => acc || element.querySelector<HTMLElement>(selector) || (element.matches(selector) ? element : null),
       null
     )
-    const text = normalizeText((textElement ?? element).textContent ?? "")
-    if (!text) {
-      continue
-    }
+    
+    const textContent = (textElement || element).textContent || ""
+    const text = normalizeText(textContent)
+    if (!text || text.length < 1) continue
 
+    const isUser = !!element.closest('[data-testid="send_message"]') || 
+                   !!element.closest('.items-end, .justify-end, [style*="flex-end"]') || 
+                   !!element.querySelector('[data-testid="message_status"]')
+    
     nextNodes.push({
       id,
-      role: element.closest('[data-testid="send_message"]') ? "user" : "assistant",
+      role: isUser ? "user" : "assistant",
       text,
       element
     })
-    seen.add(id)
   }
 
   return nextNodes

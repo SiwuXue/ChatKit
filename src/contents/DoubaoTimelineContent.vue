@@ -10,7 +10,7 @@ import cssText from "data-text:./doubao-timeline.css"
 import DoubaoTimeline from "../components/DoubaoTimeline.vue"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://www.doubao.com/*"]
+  matches: ["https://*.doubao.com/*"]
 }
 
 export const getStyle: PlasmoGetStyle = () => {
@@ -19,10 +19,10 @@ export const getStyle: PlasmoGetStyle = () => {
   return style
 }
 
-const getInlineAnchor: PlasmoGetInlineAnchor = () => document.documentElement
+const getInlineAnchor: PlasmoGetInlineAnchor = () => document.querySelector("#root") || document.documentElement
 
 const mountShadowHost: PlasmoMountShadowHost = ({ anchor, shadowHost }) => {
-  const mountPoint = document.body ?? anchor?.element ?? document.documentElement
+  const mountPoint = anchor?.element || document.body || document.documentElement
   mountPoint.appendChild(shadowHost!)
 }
 

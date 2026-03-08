@@ -1,6 +1,6 @@
 ﻿.doubao-timeline-widget {
   position: fixed;
-  z-index: 2147483000;
+  z-index: 2147483647;
   width: max-content;
   display: flex;
   align-items: flex-start;
@@ -90,11 +90,11 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #9aa6ba;
-  box-shadow: 0 0 0 2px rgba(146, 161, 186, 0.25);
+  background: #ff4d4f;
+  box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.2);
 }
 
 .doubao-timeline-dot.user {

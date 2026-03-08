@@ -10,7 +10,7 @@ import cssText from "data-text:./doubao-ui.css"
 import FolderManager from "../components/FolderManager.vue"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://www.doubao.com/*"]
+  matches: ["https://*.doubao.com/*"]
 }
 
 export const getStyle: PlasmoGetStyle = () => {

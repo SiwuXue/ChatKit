@@ -27,7 +27,7 @@ const defaultSettings: SiteSettings = {
   timelinePreventAutoJump: false,
   timelineEnableNodeHierarchy: false,
   timelineTop: 110,
-  timelineRight: 10
+  timelineRight: 0
 }
 
 export const supportedSites: SupportedSite[] = [

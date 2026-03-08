@@ -195,10 +195,15 @@ const visibleNodes = computed(() => {
   return sampled
 })
 
-const widgetStyle = computed(() => ({
-  top: `${settings.value.timelineTop}px`,
-  right: `${settings.value.timelineRight}px`
-}))
+const widgetStyle = computed(() => {
+  const r = settings.value.timelineRight
+  // If user has old settings (10px), we can't easily force it to 0 without overwriting,
+  // but we can make sure 0 is actually 0.
+  return {
+    top: `${settings.value.timelineTop}px`,
+    right: `${r}px`
+  }
+})
 
 const getNodeTop = (index: number, total: number) => {
   if (total <= 1) {
@@ -643,6 +648,7 @@ onBeforeUnmount(() => {
 
 <template>
   <aside
+    v-if="settings.enabled"
     ref="widgetRef"
     class="doubao-timeline-widget"
     :class="{

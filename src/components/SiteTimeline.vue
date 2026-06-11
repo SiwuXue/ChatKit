@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 import {
   getDefaultSiteSettings,
   getSiteSettings,
@@ -43,6 +43,7 @@ const props = defineProps<{
     messageId: string,
     elementMap: Map<string, HTMLElement>
   ) => HTMLElement | null
+  scrollContainerSelector?: string
 }>()
 
 const maxVisibleDots = 18
@@ -70,6 +71,8 @@ let storageListener:
 let dragCleanup: (() => void) | null = null
 let scrollPreserveTimer: ReturnType<typeof setTimeout> | null = null
 let autoScrollUnlockTimer: ReturnType<typeof setTimeout> | null = null
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+let scrollCollectTimer: ReturnType<typeof setTimeout> | null = null
 let lastObservedUrl = ""
 let suppressAutoScrollUntil = 0
 
@@ -382,6 +385,37 @@ const loadSiteSettings = async () => {
   settings.value = await getSiteSettings(location.hostname)
 }
 
+const ensureWidgetWithinViewport = async () => {
+  const widget = widgetRef.value
+  if (!widget) {
+    return
+  }
+
+  const maxTop = Math.max(0, window.innerHeight - widget.offsetHeight - 8)
+  const maxRight = Math.max(0, window.innerWidth - 32)
+  const nextTop = clamp(settings.value.timelineTop, 0, maxTop)
+  const nextRight = clamp(settings.value.timelineRight, 0, maxRight)
+
+  if (nextTop === settings.value.timelineTop && nextRight === settings.value.timelineRight) {
+    return
+  }
+
+  await persistCurrentSettings({
+    timelineTop: nextTop,
+    timelineRight: nextRight
+  })
+}
+
+const handleWindowResize = () => {
+  if (resizeTimer) {
+    clearTimeout(resizeTimer)
+  }
+
+  resizeTimer = setTimeout(() => {
+    void ensureWidgetWithinViewport()
+  }, 120)
+}
+
 const listenSettingsChange = () => {
   if (typeof chrome === "undefined" || !chrome.storage?.onChanged?.addListener) {
     return
@@ -590,6 +624,8 @@ const setupRouteRefresh = () => {
 
 onMounted(async () => {
   await loadSiteSettings()
+  await nextTick()
+  await ensureWidgetWithinViewport()
   loadHierarchyState()
   ensureHighlightStyle()
   lastObservedUrl = location.href
@@ -598,6 +634,91 @@ onMounted(async () => {
   setupRouteRefresh()
   listenSettingsChange()
   window.addEventListener("click", closeContextMenu, true)
+  window.addEventListener("resize", handleWindowResize, { passive: true })
+
+  // 延迟重试，给虚拟列表多一点时间渲染
+  setTimeout(() => collectTimeline(), 300)
+  setTimeout(() => collectTimeline(), 800)
+
+  // 自动预加载：快速滚动一小段，触发虚拟列表渲染更多 DOM，然后滚回原位
+  const tryPreloadVirtualList = async () => {
+    try {
+      // 1. 尝试找到滚动容器
+      let scrollContainer: HTMLElement | null = null
+      if (props.scrollContainerSelector) {
+        const selectors = props.scrollContainerSelector.split(",").map(s => s.trim()).filter(Boolean)
+        for (const sel of selectors) {
+          const el = document.querySelector(sel) as HTMLElement
+          if (el) {
+            scrollContainer = el
+            break
+          }
+        }
+      }
+      if (!scrollContainer) {
+        scrollContainer = document.querySelector('main') as HTMLElement || document.documentElement
+      }
+
+      // 2. 保存原始位置
+      const originalScrollTop = scrollContainer.scrollTop
+      const originalScrollHeight = scrollContainer.scrollHeight
+
+      // 3. 快速往上滚一小段，然后再滚回来，触发虚拟列表渲染
+      const smallJump = 400 // 像素
+      const maxPreloadAttempts = 2
+      let preloadCount = 0
+
+      const runPreloadCycle = () => {
+        if (preloadCount >= maxPreloadAttempts) {
+          // 最后滚回原位
+          scrollContainer.scrollTop = originalScrollTop
+          collectTimeline()
+          return
+        }
+
+        preloadCount++
+        const currentTop = scrollContainer.scrollTop
+        // 往上滚一点
+        scrollContainer.scrollTop = Math.max(0, currentTop - smallJump)
+
+        // 等一小会儿，让页面渲染
+        setTimeout(() => {
+          // 采集一下，然后继续下一轮
+          collectTimeline()
+          setTimeout(runPreloadCycle, 80)
+        }, 60)
+      }
+
+      // 等页面稍微稳定了再开始预加载
+      setTimeout(runPreloadCycle, 1200)
+    } catch (e) {
+      // 预加载失败不影响主功能
+      console.debug("[Timeline] Preload skipped", e)
+    }
+  }
+
+  tryPreloadVirtualList()
+
+  // 监听滚动事件，滚动时也去重新采集节点
+  const handleScroll = () => {
+    if (scrollCollectTimer) {
+      clearTimeout(scrollCollectTimer)
+    }
+    scrollCollectTimer = setTimeout(() => {
+      collectTimeline()
+    }, 100)
+  }
+
+  window.addEventListener("scroll", handleScroll, { passive: true, capture: true })
+
+    // 保存清理函数
+    ; (window as any).__plasmoTimelineScrollCleanup = () => {
+      window.removeEventListener("scroll", handleScroll, true)
+      if (scrollCollectTimer) {
+        clearTimeout(scrollCollectTimer)
+        scrollCollectTimer = null
+      }
+    }
 })
 
 onBeforeUnmount(() => {
@@ -624,6 +745,22 @@ onBeforeUnmount(() => {
     autoScrollUnlockTimer = null
   }
 
+  if (resizeTimer) {
+    clearTimeout(resizeTimer)
+    resizeTimer = null
+  }
+
+  if (scrollCollectTimer) {
+    clearTimeout(scrollCollectTimer)
+    scrollCollectTimer = null
+  }
+
+  // 调用之前保存的滚动监听清理函数
+  const cleanup = (window as any).__plasmoTimelineScrollCleanup
+  if (typeof cleanup === "function") {
+    cleanup()
+  }
+
   if (unpatchHistory) {
     unpatchHistory()
     unpatchHistory = null
@@ -638,6 +775,7 @@ onBeforeUnmount(() => {
   storageListener = null
 
   window.removeEventListener("click", closeContextMenu, true)
+  window.removeEventListener("resize", handleWindowResize)
 
   if (ownHighlightStyle?.parentNode) {
     ownHighlightStyle.parentNode.removeChild(ownHighlightStyle)
@@ -647,46 +785,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside
-    v-if="settings.enabled"
-    ref="widgetRef"
-    class="doubao-timeline-widget"
-    :class="{
-      'minimal-shell': settings.timelineHideOutsideContainer,
-      'hierarchy-enabled': settings.timelineEnableNodeHierarchy,
-      'drag-enabled': settings.timelineDraggable
-    }"
-    :style="widgetStyle"
-    @pointerdown="beginDrag">
-    <button
-      class="doubao-timeline-toggle"
-      type="button"
-      title="打开消息搜索"
-      :disabled="nodes.length === 0"
+  <aside v-if="settings.enabled" ref="widgetRef" class="doubao-timeline-widget" :class="{
+    'minimal-shell': settings.timelineHideOutsideContainer,
+    'hierarchy-enabled': settings.timelineEnableNodeHierarchy,
+    'drag-enabled': settings.timelineDraggable
+  }" :style="widgetStyle" @pointerdown="beginDrag">
+    <button class="doubao-timeline-toggle" type="button" title="打开消息搜索" :disabled="nodes.length === 0"
       @click="panelOpen = !panelOpen">
       ≡
     </button>
 
-    <div
-      class="doubao-timeline-track"
-      :class="{ 'hierarchy-enabled': settings.timelineEnableNodeHierarchy }"
+    <div class="doubao-timeline-track" :class="{ 'hierarchy-enabled': settings.timelineEnableNodeHierarchy }"
       data-drag-handle="true">
       <div class="doubao-timeline-line"></div>
 
-      <button
-        v-for="(node, index) in visibleNodes"
-        :key="node.id"
-        class="doubao-timeline-dot"
-        :class="{
-          active: hoveredNodeId === node.id,
-          user: node.role === 'user',
-          folded: settings.timelineEnableNodeHierarchy && getNodeMeta(node.id).folded
-        }"
-        :style="getNodeStyle(node.id, index, visibleNodes.length)"
-        type="button"
-        @mouseenter="hoveredNodeId = node.id"
-        @mouseleave="hoveredNodeId = null"
-        @contextmenu="openContextMenu($event, node.id)"
+      <button v-for="(node, index) in visibleNodes" :key="node.id" class="doubao-timeline-dot" :class="{
+        active: hoveredNodeId === node.id,
+        user: node.role === 'user',
+        folded: settings.timelineEnableNodeHierarchy && getNodeMeta(node.id).folded
+      }" :style="getNodeStyle(node.id, index, visibleNodes.length)" type="button" @mouseenter="hoveredNodeId = node.id"
+        @mouseleave="hoveredNodeId = null" @contextmenu="openContextMenu($event, node.id)"
         @click="scrollToMessage(node.id)">
         <span class="doubao-timeline-tip">{{ node.order }}. {{ toPreview(node.text, 60) }}</span>
       </button>
@@ -695,26 +813,15 @@ onBeforeUnmount(() => {
     </div>
 
     <section v-if="panelOpen && nodes.length > 0" class="doubao-timeline-panel">
-      <input
-        v-model="search"
-        class="doubao-timeline-search"
-        type="search"
-        placeholder="搜索..."
+      <input v-model="search" class="doubao-timeline-search" type="search" placeholder="搜索..."
         @keydown.esc.prevent="panelOpen = false" />
 
       <ol class="doubao-timeline-list">
         <li v-for="node in filteredNodes" :key="node.id" class="doubao-timeline-item">
-          <button
-            class="doubao-timeline-item-btn"
-            :style="getListItemStyle(node.id)"
-            type="button"
-            :title="node.text"
-            @contextmenu="openContextMenu($event, node.id)"
-            @click="scrollToMessage(node.id)">
+          <button class="doubao-timeline-item-btn" :style="getListItemStyle(node.id)" type="button" :title="node.text"
+            @contextmenu="openContextMenu($event, node.id)" @click="scrollToMessage(node.id)">
             <span class="order">{{ node.order }}</span>
-            <span
-              v-if="settings.timelineEnableNodeHierarchy && getNodeMeta(node.id).folded"
-              class="fold-flag">
+            <span v-if="settings.timelineEnableNodeHierarchy && getNodeMeta(node.id).folded" class="fold-flag">
               ▸
             </span>
             <span class="text">{{ toPreview(node.text, 80) }}</span>
@@ -723,11 +830,8 @@ onBeforeUnmount(() => {
       </ol>
     </section>
 
-    <div
-      v-if="contextMenu && settings.timelineEnableNodeHierarchy"
-      class="doubao-timeline-context-menu"
-      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
-      @click.stop>
+    <div v-if="contextMenu && settings.timelineEnableNodeHierarchy" class="doubao-timeline-context-menu"
+      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }" @click.stop>
       <button type="button" @click="increaseNodeLevel">增加层级</button>
       <button type="button" @click="decreaseNodeLevel">降低层级</button>
       <button type="button" @click="toggleNodeFold">

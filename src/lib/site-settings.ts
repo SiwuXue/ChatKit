@@ -23,11 +23,11 @@ const defaultSettings: SiteSettings = {
   folderSpacing: 0,
   timelineScrollMode: "flow",
   timelineHideOutsideContainer: false,
-  timelineDraggable: false,
+  timelineDraggable: true,
   timelinePreventAutoJump: false,
   timelineEnableNodeHierarchy: false,
-  timelineTop: 110,
-  timelineRight: 0
+  timelineTop: 160,
+  timelineRight: 10
 }
 
 export const supportedSites: SupportedSite[] = [

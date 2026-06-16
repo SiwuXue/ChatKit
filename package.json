@@ -6,11 +6,12 @@
   "author": "Plasmo Corp. <foss@plasmo.com>",
   "scripts": {
     "dev": "plasmo dev",
-    "build": "plasmo build",
-    "package": "plasmo package"
+    "build": "plasmo build && npm run copy-main-script",
+    "package": "plasmo package",
+    "copy-main-script": "node -e \"require('fs').copyFileSync('scripts/doubao-download-main.js','build/chrome-mv3-prod/doubao-download-main.js')\""
   },
   "dependencies": {
-    "plasmo": "0.90.5", 
+    "plasmo": "0.90.5",
     "vue": "3.3.4"
   },
   "devDependencies": {
@@ -24,6 +25,12 @@
     ],
     "host_permissions": [
       "https://*/*"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": ["doubao-download-main.js"],
+        "matches": ["https://*.doubao.com/*", "https://doubao.com/*"]
+      }
     ]
   }
 }

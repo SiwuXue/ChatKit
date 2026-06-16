@@ -142,6 +142,15 @@ onMounted(async () => {
                         <span class="switch-ui"></span>
                     </label>
 
+                    <label v-if="selectedSiteId === 'doubao'" class="row">
+                        <div class="row-text">
+                            <strong>无水印下载</strong>
+                            <p class="desc">在图片和视频右上角显示下载按钮，可下载无水印原文件</p>
+                        </div>
+                        <input v-model="settings.enableDoubaoDownload" class="switch-input" type="checkbox" />
+                        <span class="switch-ui"></span>
+                    </label>
+
                     <div class="slider-row" :class="{ disabled: !settings.enabled }">
                         <div class="slider-title">
                             <strong>文件夹间距</strong>

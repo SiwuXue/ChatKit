@@ -161,6 +161,14 @@ onMounted(async () => {
               :disabled="!settings.enabled" />
             <span class="switch-ui"></span>
           </label>
+
+          <label v-if="selectedSiteId === 'doubao'" class="row">
+            <div class="row-text">
+              <strong>无水印下载</strong>
+            </div>
+            <input v-model="settings.enableDoubaoDownload" class="switch-input" type="checkbox" />
+            <span class="switch-ui"></span>
+          </label>
         </div>
       </section>
 

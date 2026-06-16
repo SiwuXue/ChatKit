@@ -9,6 +9,7 @@ export type SiteSettings = {
   timelineEnableNodeHierarchy: boolean
   timelineTop: number
   timelineRight: number
+  enableDoubaoDownload: boolean
 }
 
 export type SupportedSite = {
@@ -27,7 +28,8 @@ const defaultSettings: SiteSettings = {
   timelinePreventAutoJump: false,
   timelineEnableNodeHierarchy: false,
   timelineTop: 160,
-  timelineRight: 10
+  timelineRight: 10,
+  enableDoubaoDownload: true
 }
 
 export const supportedSites: SupportedSite[] = [
@@ -171,7 +173,11 @@ export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
       defaultSettings.timelineEnableNodeHierarchy
     ),
     timelineTop: normalizeTimelineTop(candidate.timelineTop),
-    timelineRight: normalizeTimelineRight(candidate.timelineRight)
+    timelineRight: normalizeTimelineRight(candidate.timelineRight),
+    enableDoubaoDownload: normalizeBoolean(
+      candidate.enableDoubaoDownload,
+      defaultSettings.enableDoubaoDownload
+    )
   }
 }
 

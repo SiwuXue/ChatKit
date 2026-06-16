@@ -10,6 +10,7 @@ export type SiteSettings = {
   timelineTop: number
   timelineRight: number
   enableDoubaoDownload: boolean
+  chatWidth: number
 }
 
 export type SupportedSite = {
@@ -29,7 +30,8 @@ const defaultSettings: SiteSettings = {
   timelineEnableNodeHierarchy: false,
   timelineTop: 160,
   timelineRight: 10,
-  enableDoubaoDownload: true
+  enableDoubaoDownload: true,
+  chatWidth: 0
 }
 
 export const supportedSites: SupportedSite[] = [
@@ -177,7 +179,10 @@ export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
     enableDoubaoDownload: normalizeBoolean(
       candidate.enableDoubaoDownload,
       defaultSettings.enableDoubaoDownload
-    )
+    ),
+    chatWidth: typeof candidate.chatWidth === "number" && !Number.isNaN(candidate.chatWidth)
+      ? Math.max(0, Math.min(2000, Math.round(candidate.chatWidth)))
+      : defaultSettings.chatWidth
   }
 }
 

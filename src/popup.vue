@@ -169,6 +169,14 @@ onMounted(async () => {
             <input v-model="settings.enableDoubaoDownload" class="switch-input" type="checkbox" />
             <span class="switch-ui"></span>
           </label>
+
+          <div class="slider-row">
+            <div class="slider-title">
+              <strong>宽屏设置</strong>
+              <span>{{ settings.chatWidth === 0 ? '关闭' : '+' + settings.chatWidth + 'px' }}</span>
+            </div>
+            <input v-model.number="settings.chatWidth" type="range" min="0" max="2000" step="50" />
+          </div>
         </div>
       </section>
 
@@ -344,6 +352,50 @@ body::-webkit-scrollbar,
 
 .switch-input:disabled + .switch-ui {
   opacity: 0.35;
+}
+
+/* ── slider ── */
+.slider-row {
+  margin-top: 0;
+  padding: 10px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.slider-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #171717;
+}
+
+.slider-title span {
+  font-size: 12px;
+  color: #737373;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e5e5e5;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #171717;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
 }
 
 /* ── footer / button ── */

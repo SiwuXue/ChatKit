@@ -234,6 +234,21 @@ onMounted(async () => {
                 </div>
             </section>
 
+            <section class="card">
+                <header class="section-header">
+                    <h2>宽屏设置</h2>
+                </header>
+
+                <div class="slider-row">
+                    <div class="slider-title">
+                        <strong>页面宽度</strong>
+                        <span>{{ settings.chatWidth === 0 ? '关闭' : '+' + settings.chatWidth + 'px' }}</span>
+                    </div>
+                    <input v-model.number="settings.chatWidth" type="range" min="0" max="2000" step="50" />
+                    <p class="desc" style="margin-top:4px">0 为默认宽度，在原宽基础上增加像素</p>
+                </div>
+            </section>
+
             <section class="card danger-zone">
                 <header class="section-header">
                     <h2>危险区</h2>

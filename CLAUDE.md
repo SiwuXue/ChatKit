@@ -41,10 +41,11 @@ Plasmo auto-discovers these by filename and location:
 | `src/popup.vue` | Toolbar popup (320×340). Reads active-tab hostname, auto-selects supported site, exposes core toggles, links to options page. |
 | `src/options.vue` | Full-page advanced settings (folder + timeline + danger-zone reset). |
 | `src/background.ts` | Service worker — currently a placeholder (`console.log` only). Real work happens in content scripts. |
-| `src/contents/Doubao.vue` | Content script for `https://*.doubao.com/*`. Mounts `<FolderManager>` inline into the sidebar. |
-| `src/contents/Kimi.vue` | Content script for `https://www.kimi.com/*`. Mounts `<FolderManager>` next to the Kimi `+` button. |
-| `src/contents/DoubaoTimelineContent.vue` | Mounts `<DoubaoTimeline>` as a fixed overlay (z-index 2147483647) with MutationObserver to re-mount if the SPA purges it. |
-| `src/contents/KimiTimelineContent.vue` | Same pattern for Kimi. |
+| `src/contents/doubao/Doubao.vue` | Content script for `https://*.doubao.com/*`. Mounts `<FolderManager>` inline into the sidebar. |
+| `src/contents/kimi/Kimi.vue` | Content script for `https://www.kimi.com/*`. Mounts `<FolderManager>` next to the Kimi `+` button. |
+| `src/contents/doubao/DoubaoTimelineContent.vue` | Mounts `<DoubaoTimeline>` as a fixed overlay (z-index 2147483647) with MutationObserver to re-mount if the SPA purges it. |
+| `src/contents/kimi/KimiTimelineContent.vue` | Same pattern for Kimi. |
+| `src/contents/doubao/DoubaoDownloadContent.vue` | Injects watermark-free download button on images/videos via main-world script. |
 
 ### Shadow DOM + style injection pattern
 
@@ -62,11 +63,28 @@ All four content scripts also install global `error` / `unhandledrejection` list
 FolderManager.vue                     ← root, owns folder tree state + storage I/O
 └── FolderTreeItem.vue                ← recursive node renderer
 
-DoubaoTimeline.vue / KimiTimeline.vue ← thin wrappers
+components/doubao/DoubaoTimeline.vue  ← thin wrappers
+components/kimi/KimiTimeline.vue
 └── SiteTimeline.vue                  ← generic, reusable timeline renderer
+
+components/doubao/DoubaoDownload.vue  ← watermark-free download (doubao only)
 ```
 
 `SiteTimeline.vue` is intentionally site-agnostic; per-site wrappers specialize selectors and any site-specific UI quirks.
+
+### Directory layout
+
+```
+src/contents/
+├── doubao-ui.css / doubao-timeline.css  (shared)
+├── doubao/  → Doubao.vue, DoubaoTimelineContent.vue, DoubaoDownloadContent.vue
+└── kimi/    → Kimi.vue, KimiTimelineContent.vue
+
+src/components/
+├── FolderManager.vue / FolderTreeItem.vue / SiteTimeline.vue  (shared)
+├── doubao/  → DoubaoTimeline.vue, DoubaoDownload.vue
+└── kimi/    → KimiTimeline.vue
+```
 
 ### Storage (`src/lib/site-settings.ts`)
 
@@ -80,7 +98,7 @@ Two namespaced, versioned key families in `chrome.storage.sync`:
 
 `SiteSettings` includes: `enabled`, `hideArchivedConversations`, `folderSpacing` (0–16), `timelineScrollMode` (`"flow"|"jump"`), `timelineHideOutsideContainer`, `timelineDraggable`, `timelinePreventAutoJump`, `timelineEnableNodeHierarchy`, `timelineTop` (0–1000), `timelineRight` (0–500).
 
-`supportedSites` is the single source of truth: `{ id: "doubao", hostname: "doubao.com", label: "豆包" }` and `{ id: "kimi", hostname: "kimi.com", label: "Kimi" }`. `detectSupportedSite` does suffix matching (so `www.doubao.com` resolves to `doubao`). Adding a new platform means: extend `supportedSites`, add a content script under `src/contents/`, optionally add a `*Timeline.vue` wrapper if host-specific behavior is needed.
+`supportedSites` is the single source of truth: `{ id: "doubao", hostname: "doubao.com", label: "豆包" }` and `{ id: "kimi", hostname: "kimi.com", label: "Kimi" }`. `detectSupportedSite` does suffix matching (so `www.doubao.com` resolves to `doubao`). Adding a new platform means: extend `supportedSites`, add a content script under `src/contents/<site>/`, optionally add components under `src/components/<site>/` if host-specific behavior is needed.
 
 `normalizeSiteSettings` is the integrity boundary — every value read from storage passes through it. When extending `SiteSettings`, add a field here, set a default in `defaultSettings`, and add a `normalizeX` helper that clamps to a sane range. Never persist raw user input without normalization.
 
@@ -107,4 +125,12 @@ When a host site changes its DOM, prefer updating the selectors here over restru
 - **Background script is empty.** Adding real messaging, alarms, or cross-tab sync goes in `src/background.ts`.
 - **No tests.** If adding tests, pick a runner compatible with Plasmo's Vue + TS pipeline (Vitest is the conventional choice) and wire it into `package.json` scripts — none exist today.
 - **Docs in `docs/`** are forward-looking feature designs (memory system, recommendations). They are aspirational, not specs of current behavior.
-- `src/contents/doubao-ui.css` is imported by both `Doubao.vue` and `Kimi.vue` despite its name — folder UI styles are shared. Renaming would require updating both imports.
+- `src/contents/doubao-ui.css` is imported by both `doubao/Doubao.vue` and `kimi/Kimi.vue` despite its name — folder UI styles are shared.
+
+
+## 项目 Skills
+以下 Skill 定义了标准化的开发流程（每个 Skill 是一个目录，核心指令在 SKILL.md 中）：
+- `.claude/skills/git-commit/` - Git 提交规范
+
+执行相关任务时，请先阅读对应 Skill 目录下的 SKILL.md 并严格遵循。
+如 Skill 中包含 scripts/、resources/ 或 references/，请一并参考。

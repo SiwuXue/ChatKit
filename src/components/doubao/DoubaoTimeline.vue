@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import SiteTimeline from "./SiteTimeline.vue"
+import SiteTimeline from "../SiteTimeline.vue"
 
 type CollectedNode = {
   id: string

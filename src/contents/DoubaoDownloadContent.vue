@@ -10,7 +10,7 @@ import {
   videoCache,
   type DoubaoImageData,
 } from "~/lib/doubao-download"
-import DoubaoDownload from "~/components/DoubaoDownload.vue"
+import DoubaoDownload from "~/components/doubao/DoubaoDownload.vue"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://*.doubao.com/*", "https://doubao.com/*"],

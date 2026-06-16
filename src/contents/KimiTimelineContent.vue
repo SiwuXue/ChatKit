@@ -7,7 +7,7 @@ import type {
 } from "plasmo"
 
 import cssText from "data-text:./doubao-timeline.css"
-import KimiTimeline from "../components/KimiTimeline.vue"
+import KimiTimeline from "../components/kimi/KimiTimeline.vue"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.kimi.com/*"]

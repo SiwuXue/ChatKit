@@ -7,7 +7,7 @@ import type {
 } from "plasmo"
 
 import cssText from "data-text:./doubao-timeline.css"
-import DoubaoTimeline from "../components/DoubaoTimeline.vue"
+import DoubaoTimeline from "../components/doubao/DoubaoTimeline.vue"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://doubao.com/*", "https://*.doubao.com/*"]

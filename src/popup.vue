@@ -147,9 +147,17 @@ onMounted(async () => {
         <div class="rows" :class="{ disabled: isLoading }">
           <label class="row">
             <div class="row-text">
-              <strong>启用文件夹功能</strong>
+              <strong>文件夹</strong>
             </div>
-            <input v-model="settings.enabled" class="switch-input" type="checkbox" />
+            <input v-model="settings.folderEnabled" class="switch-input" type="checkbox" />
+            <span class="switch-ui"></span>
+          </label>
+
+          <label class="row">
+            <div class="row-text">
+              <strong>时间线</strong>
+            </div>
+            <input v-model="settings.timelineEnabled" class="switch-input" type="checkbox" />
             <span class="switch-ui"></span>
           </label>
 
@@ -158,7 +166,7 @@ onMounted(async () => {
               <strong>隐藏已归档对话</strong>
             </div>
             <input v-model="settings.hideArchivedConversations" class="switch-input" type="checkbox"
-              :disabled="!settings.enabled" />
+              :disabled="!settings.folderEnabled" />
             <span class="switch-ui"></span>
           </label>
 

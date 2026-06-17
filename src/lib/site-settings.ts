@@ -1,5 +1,6 @@
 export type SiteSettings = {
-  enabled: boolean
+  folderEnabled: boolean
+  timelineEnabled: boolean
   hideArchivedConversations: boolean
   folderSpacing: number
   timelineScrollMode: "flow" | "jump"
@@ -20,7 +21,8 @@ export type SupportedSite = {
 }
 
 const defaultSettings: SiteSettings = {
-  enabled: true,
+  folderEnabled: true,
+  timelineEnabled: true,
   hideArchivedConversations: false,
   folderSpacing: 0,
   timelineScrollMode: "flow",
@@ -149,9 +151,25 @@ export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
     return getDefaultSiteSettings()
   }
 
-  const candidate = raw as Partial<SiteSettings>
+  const candidate = raw as Record<string, unknown> & Partial<SiteSettings>
+
+  // Migration: old "enabled" field → new "folderEnabled" + "timelineEnabled"
+  const oldEnabled = (candidate as Record<string, unknown>).enabled
+  const hasOldEnabled = typeof oldEnabled === "boolean"
+  const hasNewFields =
+    typeof candidate.folderEnabled === "boolean" &&
+    typeof candidate.timelineEnabled === "boolean"
+  const migrationValue = hasOldEnabled && !hasNewFields ? oldEnabled : undefined
+
   return {
-    enabled: normalizeBoolean(candidate.enabled, defaultSettings.enabled),
+    folderEnabled:
+      migrationValue !== undefined
+        ? migrationValue
+        : normalizeBoolean(candidate.folderEnabled, defaultSettings.folderEnabled),
+    timelineEnabled:
+      migrationValue !== undefined
+        ? migrationValue
+        : normalizeBoolean(candidate.timelineEnabled, defaultSettings.timelineEnabled),
     hideArchivedConversations: normalizeBoolean(
       candidate.hideArchivedConversations,
       defaultSettings.hideArchivedConversations

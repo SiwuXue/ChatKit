@@ -489,7 +489,7 @@ const collectArchivedConversationIds = (
 
 const applyArchiveVisibilityToPage = () => {
   const shouldHide =
-    siteSettings.value.enabled && siteSettings.value.hideArchivedConversations
+    siteSettings.value.folderEnabled && siteSettings.value.hideArchivedConversations
 
   if (!shouldHide) {
     restoreAllNativeConversationVisibility()
@@ -536,7 +536,7 @@ const markHistoryItemsDraggable = () => {
       return
     }
 
-    if (!siteSettings.value.enabled) {
+    if (!siteSettings.value.folderEnabled) {
       anchor.draggable = false
       return
     }
@@ -764,7 +764,7 @@ const handleStorageChanged = (
   const settingChange = changes[settingsStorageKey]
   if (settingChange) {
     siteSettings.value = normalizeSiteSettings(settingChange.newValue)
-    if (!siteSettings.value.enabled) {
+    if (!siteSettings.value.folderEnabled) {
       draggingConversation.value = null
       draggingFolderId.value = null
       dragOverFolderId.value = null
@@ -805,7 +805,7 @@ const handleGlobalClick = (event: MouseEvent) => {
 }
 
 const handleDocumentDragStart = (event: DragEvent) => {
-  if (!siteSettings.value.enabled) {
+  if (!siteSettings.value.folderEnabled) {
     return
   }
 
@@ -847,7 +847,7 @@ const handleDocumentDragEnd = () => {
 }
 
 const handleFolderDragStart = (folderId: string) => {
-  if (!siteSettings.value.enabled) {
+  if (!siteSettings.value.folderEnabled) {
     return
   }
 
@@ -1054,7 +1054,7 @@ const handleFolderDragOver = ({
   id: string
   event: DragEvent
 }) => {
-  if (!siteSettings.value.enabled || !isTransferFromHistory(event)) {
+  if (!siteSettings.value.folderEnabled || !isTransferFromHistory(event)) {
     return
   }
 
@@ -1079,7 +1079,7 @@ const handleFolderDrop = ({
   id: string
   event: DragEvent
 }) => {
-  if (!siteSettings.value.enabled) {
+  if (!siteSettings.value.folderEnabled) {
     return
   }
 
@@ -1122,7 +1122,7 @@ watch(
 )
 
 watch(
-  () => siteSettings.value.enabled,
+  () => siteSettings.value.folderEnabled,
   (enabled) => {
     if (!enabled) {
       draggingConversation.value = null
@@ -1188,7 +1188,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section
-    v-if="siteSettings.enabled"
+    v-if="siteSettings.folderEnabled"
     ref="rootRef"
     class="folder-panel"
     :style="panelStyle"

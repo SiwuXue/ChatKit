@@ -26,7 +26,7 @@ const selectedSite = computed(
 )
 
 const isFolderOptionsDisabled = computed(() => isLoading.value)
-const isTimelineOptionsDisabled = computed(() => isLoading.value || !settings.value.enabled)
+const isTimelineOptionsDisabled = computed(() => isLoading.value || !settings.value.timelineEnabled)
 
 const showActionMessage = (message: string) => {
     actionMessage.value = message
@@ -129,7 +129,7 @@ onMounted(async () => {
                         <div class="row-text">
                             <strong>启用文件夹功能</strong>
                         </div>
-                        <input v-model="settings.enabled" class="switch-input" type="checkbox" />
+                        <input v-model="settings.folderEnabled" class="switch-input" type="checkbox" />
                         <span class="switch-ui"></span>
                     </label>
 
@@ -138,7 +138,7 @@ onMounted(async () => {
                             <strong>隐藏已归档对话</strong>
                         </div>
                         <input v-model="settings.hideArchivedConversations" class="switch-input" type="checkbox"
-                            :disabled="!settings.enabled" />
+                            :disabled="!settings.folderEnabled" />
                         <span class="switch-ui"></span>
                     </label>
 
@@ -151,13 +151,13 @@ onMounted(async () => {
                         <span class="switch-ui"></span>
                     </label>
 
-                    <div class="slider-row" :class="{ disabled: !settings.enabled }">
+                    <div class="slider-row" :class="{ disabled: !settings.folderEnabled }">
                         <div class="slider-title">
                             <strong>文件夹间距</strong>
                             <span>{{ settings.folderSpacing }}px</span>
                         </div>
                         <input v-model.number="settings.folderSpacing" type="range" min="0" max="16" step="1"
-                            :disabled="!settings.enabled" />
+                            :disabled="!settings.folderEnabled" />
                     </div>
                 </div>
             </section>
@@ -166,6 +166,16 @@ onMounted(async () => {
                 <header class="section-header">
                     <h2>时间线选项</h2>
                 </header>
+
+                <div class="rows">
+                    <label class="row">
+                        <div class="row-text">
+                            <strong>启用时间线功能</strong>
+                        </div>
+                        <input v-model="settings.timelineEnabled" class="switch-input" type="checkbox" />
+                        <span class="switch-ui"></span>
+                    </label>
+                </div>
 
                 <div class="timeline-mode" :class="{ disabled: isTimelineOptionsDisabled }">
                     <div class="mode-title">滚动模式</div>

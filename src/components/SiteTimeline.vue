@@ -785,7 +785,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside v-if="settings.enabled" ref="widgetRef" class="doubao-timeline-widget" :class="{
+  <aside v-if="settings.timelineEnabled" ref="widgetRef" class="doubao-timeline-widget" :class="{
     'minimal-shell': settings.timelineHideOutsideContainer,
     'hierarchy-enabled': settings.timelineEnableNodeHierarchy,
     'drag-enabled': settings.timelineDraggable

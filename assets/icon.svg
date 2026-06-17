@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bubbleGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <!-- Chat bubble -->
+  <path d="M20,16 h84 a8,8 0 0 1 8,8 v52 a8,8 0 0 1 -8,8 h-24 l-16,24 v-24 h-44 a8,8 0 0 1 -8,-8 v-52 a8,8 0 0 1 8,-8 z" fill="url(#bubbleGrad)"/>
+  <!-- Sparkle (4-pointed star) -->
+  <path d="M64,26 l8,26 26,6 -26,6 -8,26 -8,-26 -26,-6 26,-6 z" fill="#FDE68A"/>
+</svg>

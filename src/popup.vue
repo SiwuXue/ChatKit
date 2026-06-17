@@ -239,6 +239,12 @@ body::-webkit-scrollbar,
   color: #171717;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   overscroll-behavior: contain;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.popup-root::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── card → flat surface ── */

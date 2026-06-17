@@ -133,6 +133,15 @@ onMounted(async () => {
                         <span class="switch-ui"></span>
                     </label>
 
+                    <div class="slider-row" :class="{ disabled: !settings.folderEnabled }">
+                        <div class="slider-title">
+                            <strong>文件夹间距</strong>
+                            <span>{{ settings.folderSpacing }}px</span>
+                        </div>
+                        <input v-model.number="settings.folderSpacing" type="range" min="0" max="16" step="1"
+                            :disabled="!settings.folderEnabled" />
+                    </div>
+
                     <label class="row">
                         <div class="row-text">
                             <strong>隐藏已归档对话</strong>
@@ -150,15 +159,6 @@ onMounted(async () => {
                         <input v-model="settings.enableDoubaoDownload" class="switch-input" type="checkbox" />
                         <span class="switch-ui"></span>
                     </label>
-
-                    <div class="slider-row" :class="{ disabled: !settings.folderEnabled }">
-                        <div class="slider-title">
-                            <strong>文件夹间距</strong>
-                            <span>{{ settings.folderSpacing }}px</span>
-                        </div>
-                        <input v-model.number="settings.folderSpacing" type="range" min="0" max="16" step="1"
-                            :disabled="!settings.folderEnabled" />
-                    </div>
                 </div>
             </section>
 
@@ -284,6 +284,12 @@ body {
     background: #fafafa;
     color: #171717;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none;
 }
 
 #__plasmo {

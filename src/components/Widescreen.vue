@@ -39,18 +39,14 @@ function captureOriginal(): number {
 
 // ── Doubao: 修改 CSS 变量 ──
 function overrideDoubaoVars(extra: number): void {
+  if (extra <= 0 || originalWidth <= 0) return
+  const target = `${originalWidth + extra}px`
   document
     .querySelectorAll('[style*="--center-content-max-width"], [style*="--content-max-width"]')
     .forEach((el) => {
       const s = (el as HTMLElement).style
-      if (extra > 0 && originalWidth > 0) {
-        const v = `${originalWidth + extra}px`
-        s.setProperty("--center-content-max-width", v, "important")
-        s.setProperty("--content-max-width", v, "important")
-      } else {
-        s.removeProperty("--center-content-max-width")
-        s.removeProperty("--content-max-width")
-      }
+      s.setProperty("--center-content-max-width", target, "important")
+      s.setProperty("--content-max-width", target, "important")
     })
 }
 
@@ -94,26 +90,32 @@ function updateKimi(extra: number): void {
 // ── 应用 ──
 function apply(extra: number): void {
   currentExtra = extra
+
+  if (observer) { observer.disconnect(); observer = null }
+
   if (isDoubao) {
-    overrideDoubaoVars(extra)
     if (extra > 0) {
+      overrideDoubaoVars(extra)
       installSetPropertyPatch()
-    } else if (_origSetProperty) {
-      CSSStyleDeclaration.prototype.setProperty = _origSetProperty
-      _origSetProperty = null
+      if (document.body) {
+        observer = new MutationObserver(() => overrideDoubaoVars(extra))
+        observer.observe(document.body, {
+          childList: true, subtree: true,
+          attributes: true, attributeFilter: ["style"],
+        })
+      }
+    } else {
+      if (_origSetProperty) {
+        CSSStyleDeclaration.prototype.setProperty = _origSetProperty
+        _origSetProperty = null
+      }
     }
   } else {
     updateKimi(extra)
-  }
-
-  if (!observer && document.body) {
-    observer = new MutationObserver(() => {
-      if (isDoubao) overrideDoubaoVars(extra)
-    })
-    observer.observe(document.body, {
-      childList: true, subtree: true,
-      attributes: true, attributeFilter: ["style"],
-    })
+    if (extra > 0 && document.body) {
+      observer = new MutationObserver(() => updateKimi(extra))
+      observer.observe(document.body, { childList: true, subtree: true })
+    }
   }
 }
 

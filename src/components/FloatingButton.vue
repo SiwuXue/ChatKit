@@ -116,15 +116,14 @@ function onClickCapture(e: MouseEvent) {
   }
 }
 
-// ── 导航（组合 skip.js + Ophel doubao 适配器的选择器）──
-const MESSAGE_SELECTORS = [
-  // skip.js 选择器
-  ".message-block-container-PggqdK",
-  '[data-testid="message-block-container"]',
-  // Ophel doubao 适配器选择器
-  '[data-target-id="message-box-target-id"]',
-  // 兜底：任何带 data-message-id 的元素
+// ── 导航（选择器优先级）──
+// doubao 虚拟列表：一条 AI 回复可能被拆成多个 v_list_row（thinking、search、text），
+// 需要按"轮次"分组：用户消息（有 justify-end）各算一轮，连续 AI 块合并为一轮。
+// 兜底选择器用于非 doubao 平台（如 Kimi）
+const FALLBACK_SELECTORS = [
+  '[data-target-id="message-box-target-id"]:has([data-message-id])',
   "[data-message-id]",
+  '[data-testid="message-block-container"]',
 ]
 
 // 虚拟滚动容器选择器（doubao 用 contain: strict 的虚拟列表）
@@ -133,8 +132,68 @@ const VIRTUAL_SCROLLER_SELECTORS = [
   '[data-name="scroll_holder"]',
 ]
 
+/**
+ * 将 block 级别的元素合并为消息轮次。
+ * - 带 justify-end 的块是用户消息，独立成一轮
+ * - 连续的无 justify-end 的块合并为一轮（一条 AI 回复的多个子块）
+ */
+function groupIntoMessageTurns(blocks: Element[]): { turns: Element[]; groups: number[] } {
+  const turns: Element[] = []
+  const groups: number[] = [] // 每个 turn 包含多少个原始 block
+  let aiGroup: Element[] = []
+
+  for (const block of blocks) {
+    const isUserMsg = block.querySelector('[data-foundation-type="send-message-action-bar"]') !== null
+
+    if (isUserMsg) {
+      // 先提交之前的 AI 组
+      if (aiGroup.length > 0) {
+        turns.push(aiGroup[0])
+        groups.push(aiGroup.length)
+        aiGroup = []
+      }
+      // 用户消息独立一轮
+      turns.push(block)
+      groups.push(1)
+    } else {
+      aiGroup.push(block)
+    }
+  }
+
+  // 最后一组 AI 块
+  if (aiGroup.length > 0) {
+    turns.push(aiGroup[0])
+    groups.push(aiGroup.length)
+  }
+
+  return { turns, groups }
+}
+
 function findAllMessages(): Element[] {
-  for (const sel of MESSAGE_SELECTORS) {
+  // doubao 虚拟列表块级选择器 → 合并为轮次
+  const blockRows = document.querySelectorAll('[data-observe-row^="block_"]')
+  if (blockRows.length > 0) {
+    const { turns } = groupIntoMessageTurns(Array.from(blockRows))
+    // 诊断日志
+    console.group(
+      `[FloatingButton] findAllMessages selector="[data-observe-row^=block_]" ` +
+      `blocks=${blockRows.length} turns=${turns.length}`,
+    )
+    turns.forEach((el, i) => {
+      const rect = el.getBoundingClientRect()
+      const label = el.getAttribute("data-observe-row") || ""
+      console.log(
+        `  [${i}] id=${label.slice(0, 24)}… ` +
+        `top=${Math.round(rect.top)} bottom=${Math.round(rect.bottom)} ` +
+        `height=${Math.round(rect.height)} visible=${rect.bottom > 0 && rect.top < window.innerHeight}`,
+      )
+    })
+    console.groupEnd()
+    return turns
+  }
+
+  // 兜底选择器（非 doubao 平台）
+  for (const sel of FALLBACK_SELECTORS) {
     const els = Array.from(document.querySelectorAll(sel))
     if (els.length > 0) return els
   }

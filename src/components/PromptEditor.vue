@@ -709,8 +709,8 @@ const AVAILABLE_VARIABLES = [
   padding: 8px 20px;
   border: none;
   border-radius: 6px;
-  background: #67c23a;
-  color: #fff;
+  background: rgba(99, 102, 241, 0.12);
+  color: rgba(99, 102, 241, 0.9);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -718,12 +718,12 @@ const AVAILABLE_VARIABLES = [
 }
 
 .config-save:hover {
-  background: #5daf34;
+  background: rgba(99, 102, 241, 0.22);
 }
 
 .config-saved-hint {
   font-size: 11px;
-  color: #67c23a;
+  color: rgba(99, 102, 241, 0.7);
 }
 
 /* ── 底栏 ── */

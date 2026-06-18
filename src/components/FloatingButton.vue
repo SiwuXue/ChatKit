@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from "vue"
+import ExportPanel from "~/components/ExportPanel.vue"
 import PromptEditor from "~/components/PromptEditor.vue"
 import PromptPanel from "~/components/PromptPanel.vue"
 
@@ -8,8 +9,10 @@ const isDragging = ref(false)
 
 const containerRef = ref<HTMLElement | null>(null)
 const promptBtnRef = ref<HTMLElement | null>(null)
+const exportBtnRef = ref<HTMLElement | null>(null)
 const showPromptPanel = ref(false)
 const showPromptEditor = ref(false)
+const showExportPanel = ref(false)
 
 function onOpenEditor() {
   showPromptPanel.value = false
@@ -373,6 +376,21 @@ onUnmounted(() => {
         </svg>
       </button>
 
+      <!-- 导出对话 -->
+      <button
+        ref="exportBtnRef"
+        class="floating-btn nav-btn export-btn"
+        type="button"
+        title="导出对话"
+        @click.stop="showExportPanel = !showExportPanel"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+      </button>
+
       <!-- 下一条消息 -->
       <button
         class="floating-btn nav-btn"
@@ -399,6 +417,13 @@ onUnmounted(() => {
     <PromptEditor
       :visible="showPromptEditor"
       @close="showPromptEditor = false"
+    />
+
+    <!-- 导出面板 -->
+    <ExportPanel
+      :visible="showExportPanel"
+      :anchor-el="exportBtnRef"
+      @close="showExportPanel = false"
     />
   </Teleport>
 </template>
@@ -613,6 +638,9 @@ onUnmounted(() => {
 .floating-btn-group.expanded button.nav-btn:nth-of-type(5) {
   transition-delay: 0.21s;
 }
+.floating-btn-group.expanded button.nav-btn:nth-of-type(6) {
+  transition-delay: 0.26s;
+}
 
 /* ── 提示词按钮 ── */
 .prompt-btn {
@@ -649,6 +677,21 @@ onUnmounted(() => {
 .edit-btn:active {
   background: rgba(16, 185, 129, 0.22) !important;
   color: rgba(16, 185, 129, 1) !important;
+}
+
+/* ── 导出按钮 ── */
+.export-btn {
+  color: rgba(59, 130, 246, 0.7) !important;
+}
+
+.export-btn:hover {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: rgba(59, 130, 246, 1) !important;
+}
+
+.export-btn:active {
+  background: rgba(59, 130, 246, 0.22) !important;
+  color: rgba(59, 130, 246, 1) !important;
 }
 
 .nav-btn svg {

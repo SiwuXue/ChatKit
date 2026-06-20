@@ -1,4 +1,5 @@
 <script lang="ts">
+import { ref, onMounted, onUnmounted } from "vue"
 import type {
   PlasmoCSConfig,
   PlasmoGetInlineAnchor,
@@ -6,6 +7,7 @@ import type {
 } from "plasmo"
 
 import FloatingButton from "~/components/FloatingButton.vue"
+import { getSiteSettings, getSiteSettingsStorageKey } from "~/lib/site-settings"
 
 export const config: PlasmoCSConfig = {
   matches: [
@@ -57,9 +59,46 @@ export default {
   components: {
     FloatingButton,
   },
+  setup() {
+    const isHidden = ref(false)
+    const siteSettingsKey = getSiteSettingsStorageKey(window.location.hostname)
+
+    const refreshHidden = async () => {
+      try {
+        const settings = await getSiteSettings(window.location.hostname)
+        isHidden.value = !!settings.floatingIconHidden
+      } catch (e) {
+        console.warn("[FloatingButtonContent] failed to load settings", e)
+      }
+    }
+
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: chrome.storage.AreaName
+    ) => {
+      if (area !== "sync" || !changes[siteSettingsKey]) return
+      void refreshHidden()
+    }
+
+    onMounted(async () => {
+      await refreshHidden()
+
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.addListener(handleStorageChange)
+      }
+    })
+
+    onUnmounted(() => {
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.removeListener(handleStorageChange)
+      }
+    })
+
+    return { isHidden }
+  },
 }
 </script>
 
 <template>
-  <FloatingButton />
+  <FloatingButton :hidden="isHidden" />
 </template>

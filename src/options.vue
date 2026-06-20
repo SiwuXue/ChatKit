@@ -159,6 +159,15 @@ onMounted(async () => {
                         <input v-model="settings.enableDoubaoDownload" class="switch-input" type="checkbox" />
                         <span class="switch-ui"></span>
                     </label>
+
+                    <label class="row">
+                        <div class="row-text">
+                            <strong>隐藏悬浮图标</strong>
+                            <p class="desc">完全隐藏悬浮导航图标</p>
+                        </div>
+                        <input v-model="settings.floatingIconHidden" class="switch-input" type="checkbox" />
+                        <span class="switch-ui"></span>
+                    </label>
                 </div>
             </section>
 

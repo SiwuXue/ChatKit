@@ -4,6 +4,10 @@ import ExportPanel from "~/components/ExportPanel.vue"
 import PromptEditor from "~/components/PromptEditor.vue"
 import PromptPanel from "~/components/PromptPanel.vue"
 
+const props = defineProps<{
+  hidden?: boolean
+}>()
+
 const isExpanded = ref(false)
 const isDragging = ref(false)
 
@@ -304,6 +308,7 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <div
+      v-show="!props.hidden"
       ref="containerRef"
       class="floating-btn-group"
       :class="{ expanded: isExpanded, dragging: isDragging }"

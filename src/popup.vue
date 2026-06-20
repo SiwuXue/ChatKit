@@ -178,6 +178,14 @@ onMounted(async () => {
             <span class="switch-ui"></span>
           </label>
 
+          <label class="row">
+            <div class="row-text">
+              <strong>隐藏悬浮图标</strong>
+            </div>
+            <input v-model="settings.floatingIconHidden" class="switch-input" type="checkbox" />
+            <span class="switch-ui"></span>
+          </label>
+
           <div class="slider-row">
             <div class="slider-title">
               <strong>宽屏设置</strong>

@@ -186,6 +186,14 @@ onMounted(async () => {
             <span class="switch-ui"></span>
           </label>
 
+          <label class="row">
+            <div class="row-text">
+              <strong>历史会话管理</strong>
+            </div>
+            <input v-model="settings.historyEnabled" class="switch-input" type="checkbox" />
+            <span class="switch-ui"></span>
+          </label>
+
           <div class="slider-row">
             <div class="slider-title">
               <strong>宽屏设置</strong>

@@ -13,6 +13,16 @@ export type SiteSettings = {
   enableDoubaoDownload: boolean
   chatWidth: number
   floatingIconHidden: boolean
+  /** 历史会话管理：总开关 */
+  historyEnabled: boolean
+  /** 单条规则的天数阈值（默认 30） */
+  historyOlderThanDays: number
+  /** 是否保护星标会话不被规则命中 */
+  historyProtectStarred: boolean
+  /** 启用每日自动清理（由 background.ts 触发） */
+  historyAutoDeleteEnabled: boolean
+  /** 上次自动清理时间戳（用于节流） */
+  lastHistoryAutoRunAt: number
 }
 
 export type SupportedSite = {
@@ -35,7 +45,12 @@ const defaultSettings: SiteSettings = {
   timelineRight: 10,
   enableDoubaoDownload: true,
   chatWidth: 0,
-  floatingIconHidden: false
+  floatingIconHidden: false,
+  historyEnabled: false,
+  historyOlderThanDays: 30,
+  historyProtectStarred: true,
+  historyAutoDeleteEnabled: false,
+  lastHistoryAutoRunAt: 0
 }
 
 export const supportedSites: SupportedSite[] = [
@@ -206,7 +221,29 @@ export const normalizeSiteSettings = (raw: unknown): SiteSettings => {
     floatingIconHidden: normalizeBoolean(
       candidate.floatingIconHidden,
       defaultSettings.floatingIconHidden
-    )
+    ),
+    historyEnabled: normalizeBoolean(
+      candidate.historyEnabled,
+      defaultSettings.historyEnabled
+    ),
+    historyOlderThanDays:
+      typeof candidate.historyOlderThanDays === "number" &&
+      !Number.isNaN(candidate.historyOlderThanDays)
+        ? Math.max(1, Math.min(3650, Math.round(candidate.historyOlderThanDays)))
+        : defaultSettings.historyOlderThanDays,
+    historyProtectStarred: normalizeBoolean(
+      candidate.historyProtectStarred,
+      defaultSettings.historyProtectStarred
+    ),
+    historyAutoDeleteEnabled: normalizeBoolean(
+      candidate.historyAutoDeleteEnabled,
+      defaultSettings.historyAutoDeleteEnabled
+    ),
+    lastHistoryAutoRunAt:
+      typeof candidate.lastHistoryAutoRunAt === "number" &&
+      !Number.isNaN(candidate.lastHistoryAutoRunAt)
+        ? Math.max(0, Math.round(candidate.lastHistoryAutoRunAt))
+        : defaultSettings.lastHistoryAutoRunAt
   }
 }
 

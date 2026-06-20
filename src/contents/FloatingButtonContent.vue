@@ -7,6 +7,10 @@ import type {
 } from "plasmo"
 
 import FloatingButton from "~/components/FloatingButton.vue"
+import type { SupportedSiteId } from "~/components/history-types"
+import { detectHistorySite } from "~/lib/history-selectors"
+import { collectConversations } from "~/lib/extract-conversations"
+import { batchDelete, archiveConversation } from "~/lib/conversation-api"
 import { getSiteSettings, getSiteSettingsStorageKey } from "~/lib/site-settings"
 
 export const config: PlasmoCSConfig = {
@@ -61,6 +65,9 @@ export default {
   },
   setup() {
     const isHidden = ref(false)
+    const siteId = ref<SupportedSiteId | null>(
+      detectHistorySite(window.location.hostname)
+    )
     const siteSettingsKey = getSiteSettingsStorageKey(window.location.hostname)
 
     const refreshHidden = async () => {
@@ -80,25 +87,83 @@ export default {
       void refreshHidden()
     }
 
+    const runAutoClean = async (
+      olderThanDays: number,
+      protectStarred: boolean
+    ) => {
+      if (!siteId.value) return
+      try {
+        const convs = collectConversations(siteId.value)
+        const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
+        const matched = convs.filter((c) => {
+          if (protectStarred && c.starred) return false
+          if (c.lastActiveAt === null) return false
+          return c.lastActiveAt < cutoff
+        })
+        const ids = matched.map((c) => c.id)
+        if (ids.length === 0) {
+          console.log(`[history/autoRun] ${siteId.value}: nothing to clean`)
+          return
+        }
+        const result = await batchDelete(siteId.value, ids)
+        console.log(
+          `[history/autoRun] ${siteId.value}: success=${result.succeeded.length} failed=${result.failed.length} notImpl=${result.notImplemented}`
+        )
+        // 本地归档兜底（API 未实现时）
+        if (result.notImplemented) {
+          for (const id of ids) {
+            await archiveConversation(siteId.value, id)
+          }
+        }
+      } catch (e) {
+        console.warn(`[history/autoRun] ${siteId.value} failed`, e)
+      }
+    }
+
+    const handleRuntimeMessage = (
+      message: { type?: string; site?: SupportedSiteId; olderThanDays?: number; protectStarred?: boolean },
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void
+    ) => {
+      if (message?.type === "history/autoRun" && message.site === siteId.value) {
+        void runAutoClean(
+          message.olderThanDays ?? 30,
+          message.protectStarred ?? true
+        ).then(() => sendResponse({ ok: true }))
+        return true
+      }
+      return false
+    }
+
     onMounted(async () => {
       await refreshHidden()
 
-      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
-        chrome.storage.onChanged.addListener(handleStorageChange)
+      if (typeof chrome !== "undefined") {
+        if (chrome.storage?.onChanged) {
+          chrome.storage.onChanged.addListener(handleStorageChange)
+        }
+        if (chrome.runtime?.onMessage) {
+          chrome.runtime.onMessage.addListener(handleRuntimeMessage)
+        }
       }
     })
 
     onUnmounted(() => {
-      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
-        chrome.storage.onChanged.removeListener(handleStorageChange)
+      if (typeof chrome !== "undefined") {
+        if (chrome.storage?.onChanged) {
+          chrome.storage.onChanged.removeListener(handleStorageChange)
+        }
+        if (chrome.runtime?.onMessage) {
+          chrome.runtime.onMessage.removeListener(handleRuntimeMessage)
+        }
       }
     })
 
-    return { isHidden }
+    return { isHidden, siteId }
   },
 }
 </script>
 
 <template>
-  <FloatingButton :hidden="isHidden" />
+  <FloatingButton :hidden="isHidden" :site-id="siteId" />
 </template>

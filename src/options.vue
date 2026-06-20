@@ -88,6 +88,21 @@ watch(selectedSiteId, () => {
     void loadSiteSettings()
 })
 
+const isHistoryOptionsDisabled = computed(
+    () => isLoading.value || !settings.value.historyEnabled
+)
+
+const runHistoryNow = async () => {
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return
+    try {
+        await chrome.runtime.sendMessage({ type: "history/runNow" })
+        showActionMessage("已触发清理任务")
+    } catch (e) {
+        console.warn("[options] runHistoryNow failed", e)
+        showActionMessage("触发失败")
+    }
+}
+
 watch(
     settings,
     () => {
@@ -265,6 +280,61 @@ onMounted(async () => {
                     </div>
                     <input v-model.number="settings.chatWidth" type="range" min="0" max="2000" step="50" />
                     <p class="desc" style="margin-top:4px">0 为默认宽度，在原宽基础上增加像素</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <header class="section-header">
+                    <h2>历史会话选项</h2>
+                </header>
+
+                <div class="rows" :class="{ disabled: isHistoryOptionsDisabled }">
+                    <label class="row">
+                        <div class="row-text">
+                            <strong>启用历史会话管理</strong>
+                            <p class="desc">悬浮图标新增"历史"按钮，可多选并批量归档/删除</p>
+                        </div>
+                        <input v-model="settings.historyEnabled" class="switch-input" type="checkbox"
+                            :disabled="isHistoryOptionsDisabled" />
+                        <span class="switch-ui"></span>
+                    </label>
+
+                    <div class="slider-row">
+                        <div class="slider-title">
+                            <strong>规则触发天数</strong>
+                            <span>{{ settings.historyOlderThanDays }} 天</span>
+                        </div>
+                        <input v-model.number="settings.historyOlderThanDays" type="range" min="1" max="365"
+                            step="1" :disabled="isHistoryOptionsDisabled" />
+                        <p class="desc" style="margin-top:4px">超过此天数未访问的会话会被规则命中</p>
+                    </div>
+
+                    <label class="row">
+                        <div class="row-text">
+                            <strong>保护星标会话</strong>
+                            <p class="desc">星标的会话不会被规则自动清理</p>
+                        </div>
+                        <input v-model="settings.historyProtectStarred" class="switch-input" type="checkbox"
+                            :disabled="isHistoryOptionsDisabled" />
+                        <span class="switch-ui"></span>
+                    </label>
+
+                    <label class="row">
+                        <div class="row-text">
+                            <strong>每日自动清理</strong>
+                            <p class="desc">由后台任务每日执行一次规则（依赖 Chrome alarms）</p>
+                        </div>
+                        <input v-model="settings.historyAutoDeleteEnabled" class="switch-input" type="checkbox"
+                            :disabled="isHistoryOptionsDisabled" />
+                        <span class="switch-ui"></span>
+                    </label>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="action-btn" :disabled="isHistoryOptionsDisabled"
+                        @click="runHistoryNow">
+                        立即执行清理
+                    </button>
                 </div>
             </section>
 

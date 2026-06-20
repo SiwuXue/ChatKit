@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from "vue"
 import ExportPanel from "~/components/ExportPanel.vue"
+import HistoryManager from "~/components/HistoryManager.vue"
 import PromptEditor from "~/components/PromptEditor.vue"
 import PromptPanel from "~/components/PromptPanel.vue"
+import type { SupportedSiteId } from "~/components/history-types"
 
 const props = defineProps<{
   hidden?: boolean
+  siteId?: SupportedSiteId
 }>()
 
 const isExpanded = ref(false)
@@ -13,6 +16,8 @@ const isDragging = ref(false)
 
 const containerRef = ref<HTMLElement | null>(null)
 const promptBtnRef = ref<HTMLElement | null>(null)
+const historyBtnRef = ref<HTMLElement | null>(null)
+const showHistoryPanel = ref(false)
 const exportBtnRef = ref<HTMLElement | null>(null)
 const showPromptPanel = ref(false)
 const showPromptEditor = ref(false)
@@ -396,6 +401,22 @@ onUnmounted(() => {
         </svg>
       </button>
 
+      <!-- 历史会话管理 -->
+      <button
+        v-if="props.siteId"
+        ref="historyBtnRef"
+        class="floating-btn nav-btn history-btn"
+        type="button"
+        title="历史会话管理"
+        @click.stop="showHistoryPanel = !showHistoryPanel"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <polyline points="3 3 6 5 4 8" />
+          <polyline points="12 7 12 12 16 14" />
+        </svg>
+      </button>
+
       <!-- 下一条消息 -->
       <button
         class="floating-btn nav-btn"
@@ -429,6 +450,15 @@ onUnmounted(() => {
       :visible="showExportPanel"
       :anchor-el="exportBtnRef"
       @close="showExportPanel = false"
+    />
+
+    <!-- 历史会话面板 -->
+    <HistoryManager
+      v-if="props.siteId"
+      :visible="showHistoryPanel"
+      :anchor-el="historyBtnRef"
+      :site-id="props.siteId"
+      @close="showHistoryPanel = false"
     />
   </Teleport>
 </template>
@@ -697,6 +727,21 @@ onUnmounted(() => {
 .export-btn:active {
   background: rgba(59, 130, 246, 0.22) !important;
   color: rgba(59, 130, 246, 1) !important;
+}
+
+/* ── 历史按钮 ── */
+.history-btn {
+  color: rgba(220, 38, 38, 0.7) !important;
+}
+
+.history-btn:hover {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: rgba(220, 38, 38, 1) !important;
+}
+
+.history-btn:active {
+  background: rgba(220, 38, 38, 0.22) !important;
+  color: rgba(220, 38, 38, 1) !important;
 }
 
 .nav-btn svg {
